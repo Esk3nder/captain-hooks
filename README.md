@@ -46,7 +46,7 @@ They compose through Claude Code's `<system-reminder>` context bus — no primit
 
 ```bash
 # 1. Fork this repo
-gh repo fork captain-hooks --clone
+gh repo fork Esk3nder/captain-hooks --clone
 
 # 2. Install hook dependencies
 cd captain-hooks && bun install

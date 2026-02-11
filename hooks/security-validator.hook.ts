@@ -96,8 +96,9 @@ function extractPath(input: Record<string, unknown>): string | null {
 async function main(): Promise<void> {
   const input = await readStdin<HookInput>(50);
   if (!input?.tool_name) {
-    console.log(JSON.stringify({ continue: true }));
-    process.exit(0);
+    // Fail-closed: no input means we can't validate — block
+    log('security-validator', 'No input received — blocking (fail-closed)');
+    process.exit(2);
   }
 
   const patterns = loadPatterns();
@@ -169,7 +170,8 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main().catch(() => {
-  console.log(JSON.stringify({ continue: true }));
-  process.exit(0);
+main().catch((e) => {
+  // Fail-closed: unhandled error means we can't validate — block
+  log('security-validator', `Unhandled error — blocking (fail-closed): ${e}`);
+  process.exit(2);
 });

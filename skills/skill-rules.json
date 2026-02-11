@@ -10,7 +10,7 @@
       "filePath": 4,
       "content": 3
     },
-    "threshold": 6
+    "threshold": 25
   },
   "rules": [
     {

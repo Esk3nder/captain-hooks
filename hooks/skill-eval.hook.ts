@@ -216,6 +216,7 @@ function scoreRule(
 
   const rawScore = dims.reduce((s, d) => s + d.count * d.weight, 0);
   const maxScore = dims.reduce((s, d) => s + d.total * d.weight, 0);
+  if (maxScore === 0) return null;
   const normalizedScore = (rawScore / maxScore) * 100;
 
   if (normalizedScore < threshold) return null;
