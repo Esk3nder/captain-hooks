@@ -29,6 +29,61 @@ captain-hooks/
 └── scripts/validate-skills.ts   # Validate all skills against schema
 ```
 
+## How It Works
+
+```mermaid
+flowchart TB
+    subgraph lifecycle ["Claude Code Lifecycle"]
+        direction TB
+        SS["SessionStart"]
+        UPS["UserPromptSubmit"]
+        PTU["PreToolUse"]
+        POTU["PostToolUse"]
+        STOP["Stop"]
+    end
+
+    subgraph hooks ["Hooks (when)"]
+        CL["context-loader\n<i>inject identity + CORE skill</i>"]
+        SE["skill-eval\n<i>score prompt → activate skills</i>"]
+        FE["format-enforcer\n<i>inject response format</i>"]
+        SV["security-validator\n<i>block/allow tool calls</i>"]
+        SO["stop-orchestrator\n<i>dispatch post-response handlers</i>"]
+    end
+
+    subgraph primitives ["Primitives"]
+        direction TB
+        SK["Skills (what)\n<i>skills/*/SKILL.md</i>"]
+        AG["Agents (who)\n<i>agents/*.md</i>"]
+        CMD["Commands (how)\n<i>skills/*/Tools/</i>"]
+    end
+
+    subgraph data ["Configuration"]
+        SR["skill-rules.json\n<i>weighted scoring rules</i>"]
+        SP["patterns.yaml\n<i>security block/confirm lists</i>"]
+        SJ["settings.json\n<i>hook wiring + identity</i>"]
+    end
+
+    SS --> CL
+    UPS --> SE & FE
+    PTU --> SV
+    STOP --> SO
+
+    SE -.->|reads| SR
+    SE -.->|loads| SK
+    SV -.->|reads| SP
+    CL -.->|reads| SJ
+
+    SK --- CMD
+    SK --- AG
+
+    style lifecycle fill:#1a1a2e,stroke:#4a4a6a,color:#e0e0ff
+    style hooks fill:#0d2137,stroke:#1e6091,color:#93c5fd
+    style primitives fill:#1a2e1a,stroke:#4a6a4a,color:#bbf7d0
+    style data fill:#2e1a1a,stroke:#6a4a4a,color:#fecaca
+```
+
+**The flow:** Claude Code fires lifecycle events → hooks react by reading config and injecting context → skills, agents, and commands compose through the `<system-reminder>` context bus. No primitive imports another.
+
 ## Philosophy
 
 **Four composable primitives:**
