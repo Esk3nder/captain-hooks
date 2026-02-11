@@ -23,6 +23,11 @@ commands:
     - (^|[;|&`]\s*)>\s*/dev/sd
     # chmod 777 on root or home
     - (^|[;|&`]\s*)(sudo\s+)?chmod\s+(-[a-zA-Z]*\s+)*777\s+[/~]
+    # Read/copy protected paths via shell commands
+    - (cat|less|more|head|tail|cp|mv|scp|rsync)\s+.*~/\.ssh
+    - (cat|less|more|head|tail|cp|mv|scp|rsync)\s+.*~/\.gnupg
+    - (cat|less|more|head|tail|cp|mv|scp|rsync)\s+.*~/\.aws/credentials
+    - (cat|less|more|head|tail|cp|mv|scp|rsync)\s+.*~/\.config/gcloud
 
   # Commands that require user confirmation
   confirm:

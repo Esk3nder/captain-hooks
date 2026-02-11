@@ -47,7 +47,6 @@ interface Rule {
   weights?: Partial<Weights>;
   threshold?: number;
   suggestion: string;
-  cooldown?: number;
 }
 
 interface SkillRules {
@@ -67,22 +66,6 @@ interface ScoredMatch {
   rule: Rule;
   normalizedScore: number;
   finalScore: number;
-}
-
-// ============================================================
-// Cooldown tracking (process-scoped, resets per session)
-// ============================================================
-
-const cooldownMap = new Map<string, number>();
-
-function isOnCooldown(skill: string, cooldownSeconds: number): boolean {
-  const lastFired = cooldownMap.get(skill);
-  if (!lastFired) return false;
-  return (Date.now() - lastFired) < cooldownSeconds * 1000;
-}
-
-function recordFire(skill: string): void {
-  cooldownMap.set(skill, Date.now());
 }
 
 // ============================================================
@@ -121,24 +104,24 @@ function matchDirectories(cwd: string, directories: string[]): number {
   return matches;
 }
 
-function matchIntents(prompt: string, intents: string[]): number {
-  const intentKeywords: Record<string, string[]> = {
-    debug:    ['bug', 'error', 'fix', 'broken', 'crash', 'fail', 'debug', 'issue'],
-    create:   ['create', 'new', 'add', 'build', 'scaffold', 'generate', 'init'],
-    deploy:   ['deploy', 'ship', 'release', 'publish', 'push', 'launch'],
-    test:     ['test', 'spec', 'coverage', 'assert', 'expect', 'tdd'],
-    refactor: ['refactor', 'clean', 'reorganize', 'restructure', 'simplify'],
-    research: ['research', 'investigate', 'explore', 'understand', 'analyze'],
-    review:   ['review', 'feedback', 'check', 'audit', 'inspect'],
-    extend:   ['extend', 'plugin', 'hook', 'skill', 'customize', 'configure'],
-    capture:  ['note', 'capture', 'remember', 'save', 'jot', 'log', 'record'],
-  };
+const INTENT_KEYWORDS: Record<string, string[]> = {
+  debug:    ['bug', 'error', 'fix', 'broken', 'crash', 'fail', 'debug', 'issue'],
+  create:   ['create', 'new', 'add', 'build', 'scaffold', 'generate', 'init'],
+  deploy:   ['deploy', 'ship', 'release', 'publish', 'push', 'launch'],
+  test:     ['test', 'spec', 'coverage', 'assert', 'expect', 'tdd'],
+  refactor: ['refactor', 'clean', 'reorganize', 'restructure', 'simplify'],
+  research: ['research', 'investigate', 'explore', 'understand', 'analyze'],
+  review:   ['review', 'feedback', 'check', 'audit', 'inspect'],
+  extend:   ['extend', 'plugin', 'hook', 'skill', 'customize', 'configure'],
+  capture:  ['note', 'capture', 'remember', 'save', 'jot', 'log', 'record'],
+};
 
+function matchIntents(prompt: string, intents: string[]): number {
   const lower = prompt.toLowerCase();
   let matches = 0;
 
   for (const intent of intents) {
-    const family = intentKeywords[intent];
+    const family = INTENT_KEYWORDS[intent];
     if (!family) continue;
     for (const word of family) {
       if (lower.includes(word)) {
@@ -162,12 +145,12 @@ function scoreRule(
   prompt: string,
   rule: Rule,
   defaultWeights: Weights,
-  defaultThreshold: number
+  defaultThreshold: number,
+  cwd: string,
 ): ScoredMatch | null {
   const weights: Weights = { ...defaultWeights, ...rule.weights };
   const threshold = rule.threshold ?? defaultThreshold;
   const triggers = rule.triggers;
-  const cwd = process.cwd();
 
   const dims: { count: number; total: number; weight: number }[] = [];
 
@@ -287,13 +270,12 @@ async function main(): Promise<void> {
 
   if (isExcluded(input.prompt, rules.exclusions)) process.exit(0);
 
+  const cwd = process.cwd();
   const matches: ScoredMatch[] = [];
 
   for (const rule of rules.rules) {
     if (rule.type !== 'proactive') continue;
-    if (rule.cooldown && isOnCooldown(rule.skill, rule.cooldown)) continue;
-
-    const scored = scoreRule(input.prompt, rule, rules.defaults.weights, rules.defaults.threshold);
+    const scored = scoreRule(input.prompt, rule, rules.defaults.weights, rules.defaults.threshold, cwd);
     if (scored) matches.push(scored);
   }
 
@@ -305,8 +287,6 @@ async function main(): Promise<void> {
   const parts: string[] = [];
 
   for (const match of top) {
-    recordFire(match.rule.skill);
-
     const scoreStr = rules.settings.showScores
       ? ` [score: ${match.normalizedScore.toFixed(0)}]`
       : '';

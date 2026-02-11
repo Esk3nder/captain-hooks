@@ -11,6 +11,6 @@
     "rootDir": ".",
     "types": ["bun"]
   },
-  "include": ["hooks/**/*.ts", "scripts/**/*.ts"],
+  "include": ["hooks/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

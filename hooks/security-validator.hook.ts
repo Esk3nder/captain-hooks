@@ -21,10 +21,17 @@ interface HookInput {
   session_id: string;
 }
 
+const KNOWN_TOOLS = new Set(['Bash', 'Write', 'Edit', 'Read', 'Glob', 'Grep']);
+
+interface CompiledPattern {
+  regex: RegExp;
+  source: string;
+}
+
 interface SecurityPatterns {
   commands?: {
-    block?: string[];
-    confirm?: string[];
+    block?: CompiledPattern[];
+    confirm?: CompiledPattern[];
   };
   paths?: {
     zeroAccess?: string[];
@@ -32,7 +39,7 @@ interface SecurityPatterns {
   };
 }
 
-function loadPatterns(): SecurityPatterns {
+function loadPatterns(): SecurityPatterns | null {
   const patternsPath = join(getFrameworkDir(), 'security', 'patterns.yaml');
   if (!existsSync(patternsPath)) return {};
 
@@ -59,12 +66,17 @@ function loadPatterns(): SecurityPatterns {
       if (trimmed.startsWith('- ')) {
         const value = trimmed.slice(2).replace(/^["']|["']$/g, '');
         if (currentSection === 'commands') {
-          if (currentSubSection === 'block') {
-            patterns.commands!.block = patterns.commands!.block || [];
-            patterns.commands!.block.push(value);
-          } else if (currentSubSection === 'confirm') {
-            patterns.commands!.confirm = patterns.commands!.confirm || [];
-            patterns.commands!.confirm.push(value);
+          try {
+            const compiled = { regex: new RegExp(value), source: value };
+            if (currentSubSection === 'block') {
+              patterns.commands!.block = patterns.commands!.block || [];
+              patterns.commands!.block.push(compiled);
+            } else if (currentSubSection === 'confirm') {
+              patterns.commands!.confirm = patterns.commands!.confirm || [];
+              patterns.commands!.confirm.push(compiled);
+            }
+          } catch {
+            log('security-validator', `Invalid regex pattern skipped: "${value}"`);
           }
         } else if (currentSection === 'paths') {
           if (currentSubSection === 'zeroAccess') {
@@ -80,8 +92,9 @@ function loadPatterns(): SecurityPatterns {
 
     return patterns;
   } catch (e) {
-    log('security-validator', `Failed to load patterns: ${e}`);
-    return {};
+    // Fail-closed: if we can't load patterns, we can't validate
+    log('security-validator', `Failed to load patterns — blocking all operations: ${e}`);
+    return null;
   }
 }
 
@@ -111,36 +124,51 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
+  // Log unrecognized tools for drift detection
+  if (!KNOWN_TOOLS.has(input.tool_name)) {
+    log('security-validator', `Unknown tool_name: "${input.tool_name}" — allowing but unvalidated`);
+  }
+
   const patterns = loadPatterns();
+  if (!patterns) {
+    console.log(JSON.stringify({
+      decision: 'block',
+      message: 'Security patterns failed to load — blocking all operations',
+    }));
+    process.exit(0);
+  }
 
   // Check Bash commands
   if (input.tool_name === 'Bash') {
     const cmd = extractCommand(input.tool_input);
-    if (cmd) {
-      // Block patterns
-      for (const pattern of patterns.commands?.block || []) {
-        try {
-          if (new RegExp(pattern).test(cmd)) {
-            console.log(JSON.stringify({
-              decision: 'block',
-              message: `Blocked by security policy: command matches "${pattern}"`,
-            }));
-            process.exit(0);
-          }
-        } catch { /* invalid regex */ }
-      }
+    if (!cmd) {
+      // Fail-closed: Bash tool MUST have a string command
+      console.log(JSON.stringify({
+        decision: 'block',
+        message: 'Blocked: Bash command is missing or not a string',
+      }));
+      process.exit(0);
+    }
 
-      // Confirm patterns
-      for (const pattern of patterns.commands?.confirm || []) {
-        try {
-          if (new RegExp(pattern).test(cmd)) {
-            console.log(JSON.stringify({
-              decision: 'ask',
-              message: `Security check: command matches "${pattern}". Proceed?`,
-            }));
-            process.exit(0);
-          }
-        } catch { /* invalid regex */ }
+    // Block patterns (pre-compiled at load time)
+    for (const { regex, source } of patterns.commands?.block || []) {
+      if (regex.test(cmd)) {
+        console.log(JSON.stringify({
+          decision: 'block',
+          message: `Blocked by security policy: command matches "${source}"`,
+        }));
+        process.exit(0);
+      }
+    }
+
+    // Confirm patterns (pre-compiled at load time)
+    for (const { regex, source } of patterns.commands?.confirm || []) {
+      if (regex.test(cmd)) {
+        console.log(JSON.stringify({
+          decision: 'ask',
+          message: `Security check: command matches "${source}". Proceed?`,
+        }));
+        process.exit(0);
       }
     }
   }
@@ -161,10 +189,10 @@ async function main(): Promise<void> {
       }
     }
 
-    // Confirm write paths
+    // Confirm write paths (use resolved path for consistency with zeroAccess)
     if (input.tool_name === 'Write' || input.tool_name === 'Edit') {
       for (const confirmPath of patterns.paths?.confirmWrite || []) {
-        if (filePath.includes(confirmPath)) {
+        if (expanded.includes(confirmPath)) {
           console.log(JSON.stringify({
             decision: 'ask',
             message: `Security check: writing to "${filePath}". Proceed?`,

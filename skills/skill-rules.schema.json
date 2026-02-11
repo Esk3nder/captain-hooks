@@ -115,8 +115,7 @@
         },
         "weights":    { "$ref": "#/$defs/weights" },
         "threshold":  { "type": "number", "minimum": 0, "maximum": 100 },
-        "suggestion": { "type": "string" },
-        "cooldown":   { "type": "integer", "minimum": 0 }
+        "suggestion": { "type": "string" }
       },
       "additionalProperties": false
     }

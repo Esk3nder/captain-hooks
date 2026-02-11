@@ -163,7 +163,7 @@ describe('security-validator fail-closed', () => {
     expect(exitCode).toBe(2);
   });
 
-  test('non-string command field is allowed (no crash) but command checks skipped', async () => {
+  test('non-string command field is blocked (fail-closed)', async () => {
     const { stdout, exitCode } = await runHook(
       'hooks/security-validator.hook.ts',
       {
@@ -175,7 +175,37 @@ describe('security-validator fail-closed', () => {
 
     expect(exitCode).toBe(0);
     const result = JSON.parse(stdout);
-    expect(result.continue).toBe(true);
+    expect(result.decision).toBe('block');
+  });
+
+  test('array command field is blocked (fail-closed)', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: ['rm', '-rf', '/'] },
+        session_id: 'test-sec-array',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('missing command field on Bash tool is blocked', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: {},
+        session_id: 'test-sec-no-cmd',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
   });
 
   test('valid Bash command with no matching pattern is allowed', async () => {
@@ -334,6 +364,36 @@ describe('security-validator bypass resistance', () => {
     expect(result.decision).toBe('ask');
   });
 
+  test('blocks cat ~/.ssh/id_rsa via Bash', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'cat ~/.ssh/id_rsa' },
+        session_id: 'test-bash-path-1',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('blocks cp ~/.aws/credentials via Bash', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'cp ~/.aws/credentials /tmp/exfil' },
+        session_id: 'test-bash-path-2',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
   test('allows safe rm command: rm temp.txt', async () => {
     const { stdout, exitCode } = await runHook(
       'hooks/security-validator.hook.ts',
@@ -468,6 +528,81 @@ describe('format-enforcer', () => {
 
     expect(exitCode).toBe(0);
     expect(stdout).toBe('');
+  });
+});
+
+// ============================================================
+// stop-orchestrator.hook.ts
+// ============================================================
+
+describe('stop-orchestrator', () => {
+  test('exits cleanly with existing handlers dir', async () => {
+    const { exitCode } = await runHook(
+      'hooks/stop-orchestrator.hook.ts',
+      { session_id: 'test-stop-1' },
+    );
+
+    expect(exitCode).toBe(0);
+  });
+
+  test('exits cleanly with valid input', async () => {
+    const { exitCode } = await runHook(
+      'hooks/stop-orchestrator.hook.ts',
+      { session_id: 'test-stop-2', transcript_path: '/tmp/test-transcript' },
+    );
+
+    expect(exitCode).toBe(0);
+  });
+
+  test('exits cleanly with missing session_id', async () => {
+    const { exitCode } = await runHook(
+      'hooks/stop-orchestrator.hook.ts',
+      {},
+    );
+
+    expect(exitCode).toBe(0);
+  });
+});
+
+// ============================================================
+// performance regression
+// ============================================================
+
+describe('performance regression', () => {
+  test('security-validator completes within 200ms wall clock', async () => {
+    const start = performance.now();
+    const { exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      { tool_name: 'Bash', tool_input: { command: 'ls -la' }, session_id: 'perf-1' },
+    );
+    const elapsed = performance.now() - start;
+
+    expect(exitCode).toBe(0);
+    expect(elapsed).toBeLessThan(200);
+  });
+
+  test('skill-eval completes within 200ms wall clock', async () => {
+    const start = performance.now();
+    const { exitCode } = await runHook(
+      'hooks/skill-eval.hook.ts',
+      { prompt: 'create a new skill', session_id: 'perf-2' },
+    );
+    const elapsed = performance.now() - start;
+
+    expect(exitCode).toBe(0);
+    expect(elapsed).toBeLessThan(200);
+  });
+
+  test('format-enforcer completes within 200ms wall clock', async () => {
+    const start = performance.now();
+    const { exitCode } = await runHook(
+      'hooks/format-enforcer.hook.ts',
+      { prompt: 'refactor the module', session_id: 'perf-3' },
+    );
+    const elapsed = performance.now() - start;
+
+    expect(exitCode).toBe(0);
+    expect(elapsed).toBeLessThan(200);
   });
 });
 
