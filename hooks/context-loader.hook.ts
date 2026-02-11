@@ -20,6 +20,11 @@ interface HookInput {
   session_id: string;
 }
 
+function sanitizeContent(content: string): string {
+  // Prevent breaking out of <system-reminder> context
+  return content.replace(/<\/?system-reminder>/gi, '');
+}
+
 async function main(): Promise<void> {
   const input = await readStdin<HookInput>(200);
   if (!input?.session_id) process.exit(0);
@@ -35,7 +40,7 @@ async function main(): Promise<void> {
   const corePath = join(getFrameworkDir(), 'skills', 'CORE', 'SKILL.md');
   if (existsSync(corePath)) {
     try {
-      const content = readFileSync(corePath, 'utf-8');
+      const content = sanitizeContent(readFileSync(corePath, 'utf-8'));
       parts.push(`--- CORE Skill ---\n${content}`);
     } catch (e) {
       log('context-loader', `Failed to load CORE skill: ${e}`);
@@ -46,7 +51,7 @@ async function main(): Promise<void> {
   const claudePath = join(getFrameworkDir(), 'CLAUDE.md');
   if (existsSync(claudePath)) {
     try {
-      const content = readFileSync(claudePath, 'utf-8');
+      const content = sanitizeContent(readFileSync(claudePath, 'utf-8'));
       parts.push(`--- Project Instructions ---\n${content}`);
     } catch (e) {
       log('context-loader', `Failed to load CLAUDE.md: ${e}`);

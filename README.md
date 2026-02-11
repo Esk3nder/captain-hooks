@@ -1,5 +1,8 @@
 # Captain Hooks
 
+[![CI](https://github.com/Esk3nder/captain-hooks/actions/workflows/ci.yml/badge.svg)](https://github.com/Esk3nder/captain-hooks/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A minimal, forkable framework for Claude Code infrastructure — skills, hooks, agents, and commands that compose naturally.
 
 Born from studying two production Claude Code repos ([diet103/claude-code-infrastructure-showcase](https://github.com/diet103/claude-code-infrastructure-showcase) and [ChrisWiles/claude-code-showcase](https://github.com/ChrisWiles/claude-code-showcase)), Captain Hooks extracts the best patterns from both into a zero-opinion starter template.

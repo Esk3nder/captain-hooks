@@ -3,6 +3,19 @@
   "version": "0.1.0",
   "description": "Minimal, forkable Claude Code infrastructure framework",
   "type": "module",
+  "license": "MIT",
+  "author": "Eskender <esk3nder@users.noreply.github.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Esk3nder/captain-hooks.git"
+  },
+  "keywords": [
+    "claude-code",
+    "hooks",
+    "skills",
+    "ai-infrastructure",
+    "framework"
+  ],
   "scripts": {
     "validate": "bun scripts/validate-skills.ts",
     "test": "bun test tests/",

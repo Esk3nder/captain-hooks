@@ -235,12 +235,17 @@ function isExcluded(prompt: string, exclusions: SkillRules['exclusions']): boole
 // Skill Context Loader (for "inject" enforcement)
 // ============================================================
 
+function sanitizeContent(content: string): string {
+  // Prevent breaking out of <system-reminder> context
+  return content.replace(/<\/?system-reminder>/gi, '');
+}
+
 function loadSkillContext(skillName: string): string | null {
   const skillPath = join(getFrameworkDir(), 'skills', skillName, 'SKILL.md');
   if (!existsSync(skillPath)) return null;
 
   try {
-    return readFileSync(skillPath, 'utf-8');
+    return sanitizeContent(readFileSync(skillPath, 'utf-8'));
   } catch {
     return null;
   }
