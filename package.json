@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "validate": "bun scripts/validate-skills.ts",
+    "test": "bun test tests/",
     "test:hooks": "echo '{\"prompt\":\"create a new skill\",\"session_id\":\"test\"}' | bun hooks/skill-eval.hook.ts"
   },
   "devDependencies": {

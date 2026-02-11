@@ -10,6 +10,14 @@
       "filePath": 4,
       "content": 3
     },
+    "_weightDocs": {
+      "keyword": "Exact word match in prompt (lowest — common words cause noise)",
+      "pattern": "Regex match (medium — more precise than keywords)",
+      "directory": "CWD matches trigger directory (highest — strong signal)",
+      "intent": "Semantic intent detection (medium-high — 'debug', 'create', etc.)",
+      "filePath": "File extension match in prompt (medium-high — specific to skill)",
+      "content": "File content pattern match (medium — planned, not yet wired)"
+    },
     "threshold": 25
   },
   "rules": [
@@ -44,11 +52,21 @@
     }
   ],
   "exclusions": {
-    "prefixes": ["/", "hi", "hello", "hey", "thanks", "thank you", "ok", "okay", "yes", "no", "sure", "bye"],
-    "patterns": ["^(go ahead|proceed|continue|just do it)$"]
+    "prefixes": [
+      "/", "hi", "hello", "hey", "thanks", "thank you", "ok", "okay",
+      "yes", "no", "sure", "bye", "good", "great", "nice", "cool",
+      "sounds good", "perfect", "got it", "understood", "makes sense",
+      "yep", "nope", "nah", "right", "wrong", "true", "false"
+    ],
+    "patterns": [
+      "^(go ahead|proceed|continue|just do it|do it|looks good|lgtm)$",
+      "^\\d+$",
+      "^[a-c]$"
+    ]
   },
   "settings": {
     "maxSuggestions": 3,
-    "showScores": false
+    "showScores": false,
+    "_scoreDocs": "Set showScores to true to see normalized scores in suggestions. Useful for tuning thresholds and weights during development."
   }
 }

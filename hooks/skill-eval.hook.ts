@@ -206,8 +206,9 @@ function scoreRule(
       weight: weights.filePath,
     });
   }
-  // contentPatterns: stubbed for minimal framework
-  // Production implementations can read a file cache here.
+  // contentPatterns: planned extension point.
+  // Production implementations can match against file content via a read cache.
+  // Weight: weights.content. Not yet wired — add when file-aware scoring is needed.
 
   if (dims.length === 0) return null;
 

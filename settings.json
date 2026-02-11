@@ -76,8 +76,25 @@
 
     "PostToolUse": [
       {
-        "_comment": "Add your PostToolUse hooks here. Example: auto-format after Write, auto-test after Edit.",
+        "_comment": "Extension point: auto-format, auto-test, or auto-typecheck after file changes. See CUSTOMIZE.md for examples.",
+        "_status": "planned",
         "matcher": "Write|Edit",
+        "hooks": []
+      }
+    ],
+
+    "PreCompact": [
+      {
+        "_comment": "Extension point: save state before context compaction (e.g., create handoff, persist memory).",
+        "_status": "planned",
+        "hooks": []
+      }
+    ],
+
+    "SubagentStop": [
+      {
+        "_comment": "Extension point: post-process subagent output (e.g., aggregate results, quality checks).",
+        "_status": "planned",
         "hooks": []
       }
     ],
@@ -95,7 +112,8 @@
 
     "SessionEnd": [
       {
-        "_comment": "Add session cleanup hooks here (summaries, learning extraction).",
+        "_comment": "Extension point: session cleanup (summaries, learning extraction, handoff creation).",
+        "_status": "planned",
         "hooks": []
       }
     ]

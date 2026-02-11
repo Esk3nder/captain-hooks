@@ -83,6 +83,19 @@ Skills follow a 500-line rule: SKILL.md provides routing and quick reference, Wo
 
 The `CreateSkill` meta-skill teaches you how to create more skills following the exact same pattern. The framework grows without degrading.
 
+## Glossary
+
+| Term | Definition |
+|------|-----------|
+| **Skill** | A capability with a SKILL.md entry point, optional Workflows/ and Tools/ subdirectories. Skills define *what* the AI can do. |
+| **Hook** | A TypeScript script triggered by Claude Code lifecycle events (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, etc.). Hooks define *when* things happen. |
+| **Agent** | A persona definition with model tier guidance. Agents define *who* handles a task (e.g., reviewer, researcher). |
+| **Command** | An automation script in `skills/*/Tools/`. Commands define *how* specific operations execute. |
+| **Trigger** | A condition in `skill-rules.json` that activates a skill (keywords, patterns, intents, directories, file types). |
+| **Enforcement** | How a matched skill is presented: `suggest` (hint), `inject` (auto-load SKILL.md), `require` (must acknowledge). |
+| **Handler** | A Stop-phase script in `hooks/handlers/` auto-discovered by the stop-orchestrator. |
+| **Progressive Disclosure** | Pattern where SKILL.md stays under 500 lines; details live in Workflows/ and Tools/. |
+
 ## Requirements
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
