@@ -10,7 +10,7 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { readStdin } from './lib/stdin.ts';
 import { getFrameworkDir, expandPath } from './lib/paths.ts';
 import { log } from './lib/logger.ts';
@@ -85,6 +85,15 @@ function loadPatterns(): SecurityPatterns {
   }
 }
 
+function validateInput(raw: unknown): HookInput | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.tool_name !== 'string') return null;
+  if (typeof obj.session_id !== 'string') return null;
+  if (typeof obj.tool_input !== 'object' || obj.tool_input === null) return null;
+  return obj as unknown as HookInput;
+}
+
 function extractCommand(input: Record<string, unknown>): string | null {
   return typeof input.command === 'string' ? input.command : null;
 }
@@ -94,10 +103,11 @@ function extractPath(input: Record<string, unknown>): string | null {
 }
 
 async function main(): Promise<void> {
-  const input = await readStdin<HookInput>(50);
-  if (!input?.tool_name) {
-    // Fail-closed: no input means we can't validate — block
-    log('security-validator', 'No input received — blocking (fail-closed)');
+  const raw = await readStdin<unknown>(200);
+  const input = validateInput(raw);
+  if (!input) {
+    // Fail-closed: missing or malformed input — block
+    log('security-validator', 'Invalid or missing input — blocking (fail-closed)');
     process.exit(2);
   }
 
@@ -138,11 +148,11 @@ async function main(): Promise<void> {
   // Check file paths (Write, Edit, Read)
   const filePath = extractPath(input.tool_input);
   if (filePath) {
-    const expanded = expandPath(filePath);
+    const expanded = resolve(expandPath(filePath));
 
     // Zero access paths
     for (const protected_path of patterns.paths?.zeroAccess || []) {
-      if (expanded.startsWith(protected_path)) {
+      if (expanded.startsWith(resolve(protected_path))) {
         console.log(JSON.stringify({
           decision: 'block',
           message: `Blocked: "${filePath}" is in a protected path`,

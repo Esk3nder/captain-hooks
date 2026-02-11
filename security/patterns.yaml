@@ -1,29 +1,37 @@
 # Captain Hooks Security Patterns
 # Used by hooks/security-validator.hook.ts
 #
+# All entries under block/confirm are treated as regex patterns.
 # Customize these for your environment.
 # See CUSTOMIZE.md for guidance.
 
 commands:
   # Commands that are always blocked (hard block)
+  # Patterns match against the full command string including chained commands
   block:
-    - "rm -rf /"
-    - "rm -rf ~"
-    - "mkfs\\."
-    - ":(){ :|:& };:"
-    - "dd if=/dev/(zero|random) of=/dev/sd"
-    - "> /dev/sd"
+    # rm with recursive+force in any flag order, with optional prefixes (sudo, env, command, \)
+    - (^|[;|&`]\s*)(sudo\s+)?(\\|env\s+|command\s+)*rm\s+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r|--recursive\s+--force|--force\s+--recursive)\s+[/~]
+    # rm -r -f as separate flags
+    - (^|[;|&`]\s*)(sudo\s+)?(\\|env\s+|command\s+)*rm\s+(-r\s+-f|-f\s+-r)\s+[/~]
+    # filesystem format
+    - (^|[;|&`]\s*)mkfs\.
+    # fork bomb
+    - :\(\)\{\s*:\|:&\s*\};:
+    # disk overwrite
+    - (^|[;|&`]\s*)dd\s+.*if=/dev/(zero|random|urandom)\s+.*of=/dev/sd
+    # device truncation
+    - (^|[;|&`]\s*)>\s*/dev/sd
+    # chmod 777 on root or home
+    - (^|[;|&`]\s*)(sudo\s+)?chmod\s+(-[a-zA-Z]*\s+)*777\s+[/~]
 
   # Commands that require user confirmation
   confirm:
-    - "git push --force"
-    - "git push -f"
-    - "git reset --hard"
-    - "git clean -fd"
-    - "docker system prune"
-    - "DROP TABLE"
-    - "DROP DATABASE"
-    - "TRUNCATE"
+    - (^|[;|&`]\s*)(sudo\s+)?git\s+push\s+(-[a-zA-Z]*f|--force)
+    - (^|[;|&`]\s*)(sudo\s+)?git\s+reset\s+--hard
+    - (^|[;|&`]\s*)(sudo\s+)?git\s+clean\s+-[a-zA-Z]*f
+    - (^|[;|&`]\s*)(sudo\s+)?docker\s+system\s+prune
+    - DROP\s+(TABLE|DATABASE)
+    - TRUNCATE\s+
 
 paths:
   # Paths that are never accessible (hard block)

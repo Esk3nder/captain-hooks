@@ -154,6 +154,30 @@ describe('security-validator fail-closed', () => {
     expect(exitCode).toBe(2);
   });
 
+  test('malformed input (missing tool_input) causes exit code 2', async () => {
+    const { exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      { tool_name: 'Bash', session_id: 'test' },
+    );
+
+    expect(exitCode).toBe(2);
+  });
+
+  test('non-string command field is allowed (no crash) but command checks skipped', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 123 },
+        session_id: 'test-sec-type',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.continue).toBe(true);
+  });
+
   test('valid Bash command with no matching pattern is allowed', async () => {
     const { stdout, exitCode } = await runHook(
       'hooks/security-validator.hook.ts',
@@ -191,6 +215,198 @@ describe('security-validator fail-closed', () => {
         tool_name: 'Read',
         tool_input: { file_path: `${process.env.HOME}/.ssh/id_rsa` },
         session_id: 'test-sec-3',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+});
+
+// ============================================================
+// security-validator — bypass resistance (P1-2 hardened patterns)
+// ============================================================
+
+describe('security-validator bypass resistance', () => {
+  test('blocks rm with separated flags: rm -r -f /', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'rm -r -f /' },
+        session_id: 'test-bypass-1',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('blocks rm with sudo prefix: sudo rm -rf /', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'sudo rm -rf /' },
+        session_id: 'test-bypass-2',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('blocks rm in chained command: echo hi && rm -rf /', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'echo hi && rm -rf /' },
+        session_id: 'test-bypass-3',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('blocks rm -rf ~ (home directory)', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'rm -rf ~' },
+        session_id: 'test-bypass-4',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('blocks mkfs command', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'mkfs.ext4 /dev/sda1' },
+        session_id: 'test-bypass-5',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('confirms git push --force', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'git push --force origin main' },
+        session_id: 'test-bypass-6',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('ask');
+  });
+
+  test('confirms git reset --hard', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'git reset --hard HEAD~3' },
+        session_id: 'test-bypass-7',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('ask');
+  });
+
+  test('allows safe rm command: rm temp.txt', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'rm temp.txt' },
+        session_id: 'test-bypass-safe',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.continue).toBe(true);
+  });
+});
+
+// ============================================================
+// security-validator — file path protection (P1-1 matcher fix)
+// ============================================================
+
+describe('security-validator file path protection', () => {
+  test('Write to protected path returns block', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Write',
+        tool_input: { file_path: `${process.env.HOME}/.ssh/authorized_keys` },
+        session_id: 'test-path-1',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('Edit to .env file returns ask', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Edit',
+        tool_input: { file_path: '/project/.env' },
+        session_id: 'test-path-2',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('ask');
+  });
+
+  test('Read from safe path returns allow', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Read',
+        tool_input: { file_path: '/tmp/safe-file.txt' },
+        session_id: 'test-path-3',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.continue).toBe(true);
+  });
+
+  test('path traversal via .. is resolved and blocked', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Read',
+        tool_input: { file_path: `${process.env.HOME}/.config/../.ssh/id_rsa` },
+        session_id: 'test-path-4',
       },
     );
 
