@@ -1,0 +1,14 @@
+{
+  "name": "captain-hooks",
+  "version": "0.1.0",
+  "description": "Minimal, forkable Claude Code infrastructure framework",
+  "type": "module",
+  "scripts": {
+    "validate": "bun scripts/validate-skills.ts",
+    "test:hooks": "echo '{\"prompt\":\"create a new skill\",\"session_id\":\"test\"}' | bun hooks/skill-eval.hook.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}

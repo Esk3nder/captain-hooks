@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://captain-hooks.dev/skill-rules.schema.json",
+  "title": "Captain Hooks Skill Rules",
+  "description": "Unified skill activation rules with weighted multi-factor scoring",
+  "type": "object",
+  "required": ["version", "rules"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Schema version (semver major.minor)"
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default weights applied to all rules unless overridden",
+      "properties": {
+        "weights": { "$ref": "#/$defs/weights" },
+        "threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Minimum score to trigger suggestion (0-100)"
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rule" }
+    },
+    "exclusions": {
+      "type": "object",
+      "description": "Patterns that suppress all skill evaluation",
+      "properties": {
+        "prefixes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Prompt prefixes that skip evaluation"
+        },
+        "patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Regex patterns that skip evaluation"
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "maxSuggestions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Maximum skills to suggest per prompt"
+        },
+        "showScores": {
+          "type": "boolean",
+          "description": "Include numeric score in suggestion (debug mode)"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "weights": {
+      "type": "object",
+      "description": "Multiplier weights for each scoring dimension",
+      "properties": {
+        "keyword":   { "type": "number", "minimum": 0, "maximum": 10, "default": 2 },
+        "pattern":   { "type": "number", "minimum": 0, "maximum": 10, "default": 3 },
+        "directory":  { "type": "number", "minimum": 0, "maximum": 10, "default": 5 },
+        "intent":    { "type": "number", "minimum": 0, "maximum": 10, "default": 4 },
+        "filePath":  { "type": "number", "minimum": 0, "maximum": 10, "default": 4 },
+        "content":   { "type": "number", "minimum": 0, "maximum": 10, "default": 3 }
+      },
+      "additionalProperties": false
+    },
+    "rule": {
+      "type": "object",
+      "required": ["skill", "triggers"],
+      "properties": {
+        "skill": {
+          "type": "string",
+          "description": "Skill directory name (TitleCase)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["proactive", "reactive", "guard"],
+          "default": "proactive",
+          "description": "proactive=suggest before action, reactive=suggest after tool use, guard=block/warn"
+        },
+        "enforcement": {
+          "type": "string",
+          "enum": ["suggest", "inject", "require"],
+          "default": "suggest",
+          "description": "suggest=show hint, inject=auto-load skill context, require=must acknowledge"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 5,
+          "description": "Tiebreaker — higher wins"
+        },
+        "triggers": {
+          "type": "object",
+          "properties": {
+            "keywords":        { "type": "array", "items": { "type": "string" } },
+            "patterns":        { "type": "array", "items": { "type": "string" } },
+            "fileTypes":       { "type": "array", "items": { "type": "string" } },
+            "directories":     { "type": "array", "items": { "type": "string" } },
+            "intents":         { "type": "array", "items": { "type": "string" } },
+            "contentPatterns": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "weights":    { "$ref": "#/$defs/weights" },
+        "threshold":  { "type": "number", "minimum": 0, "maximum": 100 },
+        "suggestion": { "type": "string" },
+        "cooldown":   { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

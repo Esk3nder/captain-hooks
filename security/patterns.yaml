@@ -1,0 +1,41 @@
+# Captain Hooks Security Patterns
+# Used by hooks/security-validator.hook.ts
+#
+# Customize these for your environment.
+# See CUSTOMIZE.md for guidance.
+
+commands:
+  # Commands that are always blocked (hard block)
+  block:
+    - "rm -rf /"
+    - "rm -rf ~"
+    - "mkfs\\."
+    - ":(){ :|:& };:"
+    - "dd if=/dev/(zero|random) of=/dev/sd"
+    - "> /dev/sd"
+
+  # Commands that require user confirmation
+  confirm:
+    - "git push --force"
+    - "git push -f"
+    - "git reset --hard"
+    - "git clean -fd"
+    - "docker system prune"
+    - "DROP TABLE"
+    - "DROP DATABASE"
+    - "TRUNCATE"
+
+paths:
+  # Paths that are never accessible (hard block)
+  zeroAccess:
+    - "~/.ssh"
+    - "~/.gnupg"
+    - "~/.aws/credentials"
+    - "~/.config/gcloud"
+
+  # Paths that require confirmation before writing
+  confirmWrite:
+    - "settings.json"
+    - ".env"
+    - "credentials"
+    - "secrets"

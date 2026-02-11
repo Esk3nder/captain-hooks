@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Memory (session-local, never committed)
+memory/*
+!memory/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Bun
+bun.lockb
+
+# IDE
+.vscode/
+.idea/
+
+# Debug logs
+*.log
+/tmp/

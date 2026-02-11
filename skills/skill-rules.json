@@ -1,0 +1,54 @@
+{
+  "$schema": "./skill-rules.schema.json",
+  "version": "1.0",
+  "defaults": {
+    "weights": {
+      "keyword": 2,
+      "pattern": 3,
+      "directory": 5,
+      "intent": 4,
+      "filePath": 4,
+      "content": 3
+    },
+    "threshold": 6
+  },
+  "rules": [
+    {
+      "skill": "CreateSkill",
+      "type": "proactive",
+      "enforcement": "suggest",
+      "priority": 8,
+      "triggers": {
+        "keywords": ["skill", "hook", "workflow", "extend", "plugin"],
+        "patterns": [
+          "(create|add|build|make|new).*(skill|hook|workflow)",
+          "(skill|hook|workflow).*(create|add|build|make|new)",
+          "how (do|to).*(add|create).*(skill|hook)"
+        ],
+        "intents": ["extend", "create"],
+        "directories": ["skills/", "hooks/"]
+      },
+      "suggestion": "Use CreateSkill to scaffold a new skill with the correct structure"
+    },
+    {
+      "skill": "_ExampleNotes",
+      "type": "proactive",
+      "enforcement": "suggest",
+      "priority": 1,
+      "triggers": {
+        "keywords": ["note", "capture", "jot", "remember"],
+        "patterns": ["(take|make|write).*(note|memo)"],
+        "intents": ["capture"]
+      },
+      "suggestion": "Example skill — replace with your own. See CUSTOMIZE.md"
+    }
+  ],
+  "exclusions": {
+    "prefixes": ["/", "hi", "hello", "hey", "thanks", "thank you", "ok", "okay", "yes", "no", "sure", "bye"],
+    "patterns": ["^(go ahead|proceed|continue|just do it)$"]
+  },
+  "settings": {
+    "maxSuggestions": 3,
+    "showScores": false
+  }
+}

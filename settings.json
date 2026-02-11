@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+
+  "env": {
+    "FRAMEWORK_DIR": "$CLAUDE_PROJECT_DIR"
+  },
+
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "NotebookEdit",
+      "Task",
+      "Skill"
+    ],
+    "deny": [],
+    "ask": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /:*)",
+      "Bash(sudo rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Read(~/.ssh/id_*)",
+      "Read(~/.ssh/*.pem)",
+      "Read(~/.aws/credentials)"
+    ],
+    "defaultMode": "default"
+  },
+
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PROJECT_DIR}/hooks/context-loader.hook.ts"
+          }
+        ]
+      }
+    ],
+
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PROJECT_DIR}/hooks/skill-eval.hook.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PROJECT_DIR}/hooks/format-enforcer.hook.ts"
+          }
+        ]
+      }
+    ],
+
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PROJECT_DIR}/hooks/security-validator.hook.ts"
+          }
+        ]
+      }
+    ],
+
+    "PostToolUse": [
+      {
+        "_comment": "Add your PostToolUse hooks here. Example: auto-format after Write, auto-test after Edit.",
+        "matcher": "Write|Edit",
+        "hooks": []
+      }
+    ],
+
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PROJECT_DIR}/hooks/stop-orchestrator.hook.ts"
+          }
+        ]
+      }
+    ],
+
+    "SessionEnd": [
+      {
+        "_comment": "Add session cleanup hooks here (summaries, learning extraction).",
+        "hooks": []
+      }
+    ]
+  },
+
+  "identity": {
+    "name": "Assistant",
+    "displayName": "Assistant"
+  },
+
+  "principal": {
+    "name": "User"
+  },
+
+  "_docs": {
+    "_overview": "Captain Hooks settings. Fork and customize. See CUSTOMIZE.md.",
+    "_identity": "Change identity.name and principal.name to personalize.",
+    "_hooks": "Pre-wired lifecycle hooks. Add your own or modify existing.",
+    "_permissions": "Security defaults. Adjust ask list for your workflow."
+  }
+}
