@@ -127,7 +127,7 @@ See [CUSTOMIZE.md](CUSTOMIZE.md) for the full fork-and-go guide.
 
 `skill-rules.json` merges two production-tested approaches:
 - **Type/enforcement/priority** (diet103) — classify skills as proactive/reactive/guard with suggest/inject/require enforcement
-- **Weighted multi-factor scoring** (ChrisWiles) — keyword, pattern, directory, intent, filePath, and content dimensions with configurable weights and thresholds
+- **Weighted multi-factor scoring** (ChrisWiles) — keyword, pattern, directory, intent, and filePath dimensions with configurable weights and thresholds (content-aware scoring is a documented extension point, not enabled by default)
 
 ### Hook Lifecycle Contracts
 

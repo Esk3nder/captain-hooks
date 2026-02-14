@@ -115,6 +115,27 @@ function extractPath(input: Record<string, unknown>): string | null {
   return typeof input.file_path === 'string' ? input.file_path : null;
 }
 
+function normalizeHomeTokens(command: string): string {
+  return command
+    .replace(/\$\{HOME\}/g, '~')
+    .replace(/\$HOME\b/g, '~');
+}
+
+function commandReferencesProtectedPath(command: string, protectedPaths: string[]): boolean {
+  const normalized = normalizeHomeTokens(command);
+  for (const protectedPath of protectedPaths) {
+    const expandedProtected = resolve(expandPath(protectedPath));
+    if (normalized.includes(expandedProtected)) return true;
+
+    const home = resolve(expandPath('~'));
+    if (expandedProtected.startsWith(home)) {
+      const suffix = expandedProtected.slice(home.length);
+      if (suffix && normalized.includes(`~${suffix}`)) return true;
+    }
+  }
+  return false;
+}
+
 async function main(): Promise<void> {
   const raw = await readStdin<unknown>(200);
   const input = validateInput(raw);
@@ -150,9 +171,11 @@ async function main(): Promise<void> {
       process.exit(0);
     }
 
+    const cmdForPolicy = normalizeHomeTokens(cmd);
+
     // Block patterns (pre-compiled at load time)
     for (const { regex, source } of patterns.commands?.block || []) {
-      if (regex.test(cmd)) {
+      if (regex.test(cmdForPolicy)) {
         console.log(JSON.stringify({
           decision: 'block',
           message: `Blocked by security policy: command matches "${source}"`,
@@ -161,9 +184,18 @@ async function main(): Promise<void> {
       }
     }
 
+    // Block direct protected path references in shell commands (absolute paths and $HOME forms).
+    if (commandReferencesProtectedPath(cmdForPolicy, patterns.paths?.zeroAccess || [])) {
+      console.log(JSON.stringify({
+        decision: 'block',
+        message: 'Blocked by security policy: command references a protected path',
+      }));
+      process.exit(0);
+    }
+
     // Confirm patterns (pre-compiled at load time)
     for (const { regex, source } of patterns.commands?.confirm || []) {
-      if (regex.test(cmd)) {
+      if (regex.test(cmdForPolicy)) {
         console.log(JSON.stringify({
           decision: 'ask',
           message: `Security check: command matches "${source}". Proceed?`,

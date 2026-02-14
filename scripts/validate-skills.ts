@@ -104,7 +104,7 @@ function validateSkill(skillName: string, skillPath: string): ValidationResult {
   // Check Tools/ directory
   const toolsDir = join(skillPath, 'Tools');
   if (!existsSync(toolsDir)) {
-    result.warnings.push('Missing Tools/ directory');
+    result.errors.push('Missing Tools/ directory');
   }
 
   // Check line counts

@@ -394,6 +394,68 @@ describe('security-validator bypass resistance', () => {
     expect(result.decision).toBe('block');
   });
 
+  test('blocks cat $HOME/.ssh/id_rsa via Bash', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'cat $HOME/.ssh/id_rsa' },
+        session_id: 'test-bash-path-home-1',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('blocks cat ${HOME}/.ssh/id_rsa via Bash', async () => {
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: 'cat ${HOME}/.ssh/id_rsa' },
+        session_id: 'test-bash-path-home-2',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('blocks cat absolute ~/.ssh path via Bash', async () => {
+    const abs = `${process.env.HOME}/.ssh/id_rsa`;
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: `cat ${abs}` },
+        session_id: 'test-bash-path-abs-1',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
+  test('blocks cp absolute ~/.aws/credentials via Bash', async () => {
+    const abs = `${process.env.HOME}/.aws/credentials`;
+    const { stdout, exitCode } = await runHook(
+      'hooks/security-validator.hook.ts',
+      {
+        tool_name: 'Bash',
+        tool_input: { command: `cp ${abs} /tmp/exfil` },
+        session_id: 'test-bash-path-abs-2',
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(stdout);
+    expect(result.decision).toBe('block');
+  });
+
   test('allows safe rm command: rm temp.txt', async () => {
     const { stdout, exitCode } = await runHook(
       'hooks/security-validator.hook.ts',
